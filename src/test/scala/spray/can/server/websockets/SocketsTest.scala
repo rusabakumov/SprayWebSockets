@@ -140,7 +140,7 @@ class SocketsTest extends FreeSpec with Eventually{
     import akka.pattern._
 
     val client = system.actorOf(Props(clientActor(ssl)))
-
+    Thread.sleep(10)
     IO(Sockets).!(
       Http.Connect(
         "localhost",
@@ -199,7 +199,7 @@ class SocketsTest extends FreeSpec with Eventually{
         connection await Frame(opcode = OpCode.Continuation, maskingKey = Some(-23), data = "i am cow, i am cow, hear me moooo ")
       }
       assert(result2.stringData === "YOGHURT CURDS CREAM CHEESE AND BUTTER COMES FROM LIQUIDS FROM MY UDDER I AM COW, I AM COW, HEAR ME MOOOO 2")
-      
+
     }
 
     "Closing Tests" - {

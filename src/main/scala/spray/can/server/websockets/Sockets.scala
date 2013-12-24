@@ -16,7 +16,7 @@ import io.RawPipelineStage
 
 
 import spray.can.client.websockets.SocketClientSettingsGroup
-
+import spray.can.server.BackpressureSettings
 
 
 /**
@@ -38,14 +38,16 @@ object Sockets extends ExtensionKey[SocketExt]{
   object UpgradeServer{
     def apply(resp: HttpResponse,
               frameHandler: ActorRef,
-              frameSizeLimit: Int = Int.MaxValue)
+              frameSizeLimit: Int = Int.MaxValue,
+              backpressureSettings: BackpressureSettings = BackpressureSettings(1, Int.MaxValue))
              (implicit extraStages: ServerPipelineStage = AutoPong(None)) = {
       new UpgradeServer(
         resp,
         WebsocketFrontEnd(frameHandler) >>
         extraStages >>
         Consolidation(frameSizeLimit, None) >>
-        FrameParsing(frameSizeLimit)
+        FrameParsing(frameSizeLimit) >>
+        BackPressureHandling(backpressureSettings.noAckRate, backpressureSettings.readingLowWatermark)
       )
     }
   }
@@ -53,15 +55,16 @@ object Sockets extends ExtensionKey[SocketExt]{
     def apply(req: HttpRequest,
               frameHandler: ActorRef,
               frameSizeLimit: Int = Int.MaxValue,
-              maskGen: () => Int = () => util.Random.nextInt())
+              maskGen: () => Int = () => util.Random.nextInt(),
+              backpressureSettings: BackpressureSettings = BackpressureSettings(1, Int.MaxValue))
              (implicit extraStages: ClientPipelineStage = AutoPong(Some(maskGen))) = {
       new UpgradeClient(
         req,
         WebsocketFrontEnd(frameHandler) >>
         extraStages >>
         Consolidation(frameSizeLimit, Some(maskGen)) >>
-        FrameParsing(frameSizeLimit)
-
+        FrameParsing(frameSizeLimit) >>
+        BackPressureHandling(backpressureSettings.noAckRate, backpressureSettings.readingLowWatermark)
       )
     }
   }
